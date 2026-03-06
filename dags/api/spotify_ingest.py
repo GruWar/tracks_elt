@@ -3,11 +3,16 @@ from dotenv import load_dotenv
 import base64
 import json
 from requests import post, get
+import time
 
 load_dotenv()
 
 client_id = os.getenv("SPOTIFY_CLIENT_ID")
 client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
+
+# -------------------------
+# AUTH
+# -------------------------
 
 def get_token():
     auth_string = client_id + ":" + client_secret
@@ -28,32 +33,70 @@ def get_token():
 def get_auth_header(token):
     return {"Authorization": "Bearer " + token}
 
+
+# -------------------------
+# Universal request
+# -------------------------
+
+def spotify_get(url, headers):
+    while True:
+
+        result = get(url, headers=headers)
+
+        if result.status_code == 429:
+            retry = int(result.headers.get("Retry-After", 1))
+            print(f"Rate limit hit, waiting {retry} sec")
+            time.sleep(retry)
+            continue
+
+        if result.status_code != 200:
+            print("HTTP ERROR:", result.status_code)
+            print(result.text)
+            return None
+
+        return result.json()
+
+# -------------------------
+# Artist search
+# -------------------------
+
 def search_for_artist(token, artist_name):
-    url = "https://api.spotify.com/v1/search"
     headers = get_auth_header(token)
-    query = f"q={artist_name}&type=artist&limit=1"
+    url = f"https://api.spotify.com/v1/search?q={artist_name}&type=artist&limit=1"
 
-    query_url = url + "?" + query
-    result = get(query_url, headers=headers)
-    json_result = json.loads(result.content)["artists"]["items"]
+    data = spotify_get(url, headers=headers)
 
-    return json_result[0]
+    return data["artists"]["items"][0]
+
+# -------------------------
+# Artist top tracks
+# -------------------------
+
+def get_artist_top_tracks(token, artist_id, market):
+    headers = get_auth_header(token)
+    url = f"https://api.spotify.com/v1/artists/{artist_id}/top-tracks?market=US"
+    result = get(url, headers=headers)
+    json_res = json.loads(result.content)["tracks"]
+    #data = spotify_get(url, headers=headers)
+
+    return json_res
+
+# -------------------------
+# Artist albums
+# -------------------------
 
 def get_artist_albums(token, artist_id):
     headers = get_auth_header(token)
     limit = 10
     offset = 0
     albums = []
+
     while True:
         url = f"https://api.spotify.com/v1/artists/{artist_id}/albums?include_groups=album&limit={limit}&offset={offset}"
-        result = get(url, headers=headers)
 
-        if result.status_code != 200:
-            print("HTTP ERROR:", result.status_code)
-            print(result.text)
-            break
-
-        data = result.json()["items"]
+        result = spotify_get(url, headers=headers)
+        print(result)
+        data = result["items"]
 
         if len(data) == 0:
             break
@@ -66,6 +109,10 @@ def get_artist_albums(token, artist_id):
         offset += limit
     return albums
 
+# -------------------------
+# Album tracks
+# -------------------------
+
 def get_album_tracks(token, albums):
     headers = get_auth_header(token)
     limit = 10
@@ -74,12 +121,7 @@ def get_album_tracks(token, albums):
         offset = 0
         while True:
             url = f"https://api.spotify.com/v1/albums/{album["id"]}/tracks?limit={limit}&offset={offset}"
-            result = get(url, headers=headers)
-
-            if result.status_code != 200:
-                print("HTTP ERROR:", result.status_code)
-                print(result.text)
-                break
+            result = spotify_get(url, headers=headers)
 
             data = result.json()["items"]
 
@@ -94,12 +136,32 @@ def get_album_tracks(token, albums):
             offset += limit
     return tracks
 
+# -------------------------
+# Tracks details 
+# -------------------------
+
+def get_tracks_details(token, tracks, market):
+    headers = get_auth_header(token)
+    all_tracks = []
+    batch_size = 20
+
+    for i in range(0, len(tracks), batch_size):
+        batch = tracks[i:i+batch_size]
+        ids = ",".join([t["id"] for t in batch])
+        url = f"https://api.spotify.com/v1/tracks?{ids}&market={market}"
+        result = spotify_get(url, headers=headers)
+
+        all_tracks.extend(result["tracks"])
+    return all_tracks
+
+
+
 
 token = get_token()
-result = search_for_artist(token,"skillet")
-artist_id = result["id"]
-albums = get_artist_albums(token, artist_id)
-tracks = get_album_tracks(token, albums)
+artist = search_for_artist(token, "ACDC")
+artist_id = artist["id"]
+print(artist_id)
+tracks = get_artist_top_tracks(token, artist_id, "US")
 
-for track in tracks:
-    print(track['name'])
+for idx, song in enumerate(tracks):
+    print(f"{idx + 1}. {song['name']}")

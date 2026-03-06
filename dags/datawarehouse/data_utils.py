@@ -59,10 +59,10 @@ def create_tables(schema):
             sql_query = f"""
             CREATE TABLE IF NOT EXISTS {schema}.{table} (
             ingest_id BIGSERIAL PRIMARY KEY,
-            fetched_at TIMESTAMP,
             source TEXT,
             endpoint TEXT,
-            raw_json JSONB
+            raw_json JSONB,
+            fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
             """
             cur.execute(sql_query)
@@ -84,7 +84,7 @@ def create_tables(schema):
                 disc_number INT,
                 popularity INT,
                 spotify_url TEXT,
-                fetched_at TIMESTAMP
+                fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
             """
             cur.execute(sql_query)
@@ -106,7 +106,7 @@ def create_tables(schema):
                 genre TEXT,
                 release_date DATE,
                 itunes_url TEXT,
-                fetched_at TIMESTAMP
+                fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
             """
             cur.execute(sql_query)
@@ -124,7 +124,7 @@ def create_tables(schema):
                 like_count BIGINT,
                 comment_count BIGINT,
                 video_url TEXT,
-                fetched_at TIMESTAMP
+                fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
             """
             cur.execute(sql_query)
@@ -136,7 +136,7 @@ def create_tables(schema):
             CREATE TABLE IF NOT EXISTS {schema}.{table} (
                 artist_id BIGSERIAL PRIMARY KEY,
                 artist_name VARCHAR(50),
-                created_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP
             );
             """
@@ -150,7 +150,7 @@ def create_tables(schema):
                 album_name VARCHAR(50),
                 tracks_counts INT,
                 release_date TIMESTAMP,
-                created_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP
             );
             """
@@ -177,7 +177,7 @@ def create_tables(schema):
                 like_count BIGINT,
                 comment_count BIGINT,
                 video_url TEXT,
-                created_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP
             );
             """
